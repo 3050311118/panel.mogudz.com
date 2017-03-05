@@ -2,8 +2,8 @@
 <html manifest="cache.manifest">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <script src="www.mogudz.com/js/jquery.min.js"></script>
-  <script src="www.mogudz.com/js/highcharts.js"></script>
+  <script src="http://static.mogudz.com/js/jquery.min.js"></script>
+  <script src="http://static.mogudz.com/js/highcharts.js"></script>
   <script>
   //全局变量
       var chart;
@@ -13,19 +13,17 @@
       var edit=false;
       var et=0;
       var min={};
+      var intervalID;
       min.temp=0;min.humi=0;min.speed=0;min.concent=0;min.pressure=0;
       var max={};
       max.temp=0;max.humi=0;max.speed=0;max.concent=0;max.pressure=0;
 
-      if ("WebSocket" in window) {
-      }else
-      {
-          alert("您的浏览器不支持websocekt，建议安装最新的chrome浏览器");
-      }
       if (!window.openDatabase || !window.localStorage) {
           alert("您的浏览器不支持本地存储，建议安装最新的chrome浏览器");
-
-      }else dbflag=1;
+        dbflag=0;
+      }else {
+        dbflag=1;
+      }
       var ip=location.hostname;
       if(localStorage.hhip) ip=localStorage.hhip;
 
@@ -43,7 +41,7 @@
           ws.send(JSON.stringify(arr));
       }
       function on_focus(v){
-          et= v;
+          et = v;
           edit=true;
       }
       function on_blur() {
@@ -70,11 +68,6 @@
       $(function () {
           $("#setting").attr("href", ip);
           $("#ipaddr").val(ip);
-          $("#relay").click(function(){
-              var arr={};
-              arr.action="setport";
-              ws.send(JSON.stringify(arr));
-          });
           $("#dbop").click(function(){
               if(dbflag===1){dbflag=2;$("#dbop").html("数据库已打开");}
               else if(dbflag===2){dbflag=1;$("#dbop").html("数据库已关闭");}
@@ -103,22 +96,10 @@
                           speedS.hide();
                           pressureS.hide();
                           concertS.hide();
-                          $("#status").html("设备正在连接中");
-                          ws = new WebSocket('ws://' + ip + ':81/', ['arduino']);//location.hostname 192.168.43.49
-                          ws.onopen = function () {
-                              $("#status").html('网络已连接');
-                              localStorage.hhip = ip;
-                          }
-                          ws.onerror = function () {
-                              $("#status").html('网络连接出错');
-                          }
-                          ws.onclose = function () {
-                              $("#status").html('网络连接关闭');
-                          }
-                          ws.onmessage = function (evt) {
-                              var data = JSON.parse(evt.data);
-//                            alert(evt.data)
-                              var temp = data.dispPara.temp;// / 10
+
+                          function procData(data) {
+                              var data = JSON.parse(data);
+                              var temp = data.dispPara.temp;
                               var humi = data.dispPara.humi;
                               var speed = data.dispPara.speed;
                               var pressure = data.dispPara.pressure;
@@ -127,8 +108,11 @@
                               var concent = data.dispPara.concent;
                               var alarm = data.dispPara.alarm;
 
+                              data.dispPara.devid=1;
+                              data.dispPara.type=1;
+
                               var typeStr = "设备类型: ";
-                              switch (data.dispPara.type) {
+                              switch (data.dispPara.type) {//
                                   case 1:
                                       tempS.show();
                                       typeStr = typeStr + "干燥/培养/生化系列";
@@ -263,16 +247,6 @@
                               } else {
                                   audio.pause();
                               }
-                              //if (temp > max.temp) max.temp = temp;
-                              //if (temp < min.temp) min.temp = temp;
-                              //if (humi > max.humi) max.humi = humi;
-                              //if (humi < min.humi) min.humi = humi;
-                              //if (speed > max.speed) max.speed = speed;
-                              //if (speed < min.speed) min.speed = speed;
-                              //if (pressure > max.temp) max.temp = pressure;
-                              //if (pressure < min.temp) min.temp = pressure;
-                              //if (concent > max.temp) max.temp = concent;
-                              //if (concent < min.temp) min.temp = concent;
 
                               $("#tempMin").html(min.temp);
                               $("#tempMax").html(max.temp);
@@ -285,6 +259,15 @@
                               $("#concentMin").html(min.concent);
                               $("#concentMax").html(max.concent);
                           };
+                          $("#status").html("设备正在连接中");
+                          intervalID=setInterval(function(){
+                           htmlobj=$.ajax({url:ipaddr="http://"+ip+"/machineinfo",success: function(){
+                              procData(htmlobj.responseText);
+                              $("#status").html("设备连接成功");
+                            },error:function(){
+                              $("#status").html("设备连接失败");
+                            }});            
+                          },1000);   
                       }
                   }
               },
@@ -445,8 +428,9 @@
           audio.pause();
           function reconnect()
           {
-              ws.close();
+              clearInterval(intervalID);
               ip=$("#ipaddr").val();
+              localStorage.hhip=ip;
               $('#container').highcharts(options);
           }
           function on_key(e) {
