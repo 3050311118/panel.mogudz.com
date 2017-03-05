@@ -4,6 +4,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <script src="http://static.mogudz.com/js/jquery.min.js"></script>
   <script src="http://static.mogudz.com/js/highcharts.js"></script>
+  <script src="http://static.mogudz.com/js/mqttws31.js"></script>  
   <script>
   //全局变量
       var chart;
@@ -38,7 +39,11 @@
           arr.h=now.getHours();
           arr.mi=now.getMinutes();
           arr.s=now.getSeconds();
-          ws.send(JSON.stringify(arr));
+          
+          $.post("http://"+ip+"/settime", arr,
+             function(data){
+               alert("Data Loaded: " + JSON.stringify(data));
+          });    
       }
       function on_focus(v){
           et = v;
@@ -261,7 +266,7 @@
                           };
                           $("#status").html("设备正在连接中");
                           intervalID=setInterval(function(){
-                           htmlobj=$.ajax({url:ipaddr="http://"+ip+"/machineinfo",success: function(){
+                           htmlobj=$.ajax({url:"http://"+ip+"/machineinfo",success: function(){
                               procData(htmlobj.responseText);
                               $("#status").html("设备连接成功");
                             },error:function(){
@@ -437,7 +442,6 @@
               if(e.keyCode===13 && edit===true)
               {
                   var arr={};
-                  arr.action="setpara";
                   switch(et)
                   {
                       case 1:arr.temp=$("#tempSet").val()*10;break;
@@ -449,7 +453,10 @@
                       case 7:arr.concent=$("#concentSet").val();break;
                       case 8:edit=false;reconnect(); return;
                   }
-                  ws.send(JSON.stringify(arr));
+                  $.post("http://"+ip+"/setpara", arr,
+                     function(data){
+                       alert("Data Loaded: " + JSON.stringify(data));
+                  }); 
               }
           }
           document.onkeydown = on_key;
