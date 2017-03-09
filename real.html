@@ -16,46 +16,52 @@
 
         function pub()
         {
+            //new Int8Array(0x05,0x06,0x07)
             message = new Paho.MQTT.Message($("#content").val());
             message.destinationName = $("#pubtopic").val();
             client.send(message);   
         }
+
         function sub()
         {
             client.subscribe($("#subtopic").val());
         }   
 
-        function mqtt(){
+        function mqtt(){ 
             try 
             {
-                client = new Paho.MQTT.Client("www.mogudz.com", 8083, "clientIdxxx");
+                client = new Paho.MQTT.Client("www.mogudz.com", 8083, "WEBCLIENT");
                 client.onConnectionLost = onConnectionLost;
                 client.onMessageArrived = onMessageArrived;
                 client.connect({onSuccess:onConnect});
 
                 function onConnect() {
                     console.log("onConnect"); 
-                    client.subscribe($("#subtopic").val());
+                    client.subscribe($("#subtopic").val().trim());
                     isConnected=1;  
                 };
                 function onConnectionLost(responseObject) {
                     if (responseObject.errorCode !== 0)
                     console.log("onConnectionLost:"+responseObject.errorMessage);
-                    isConnected=0;
+                    isConnected=2;
                 };
                 function onMessageArrived(message) {
-                    var str=message.payloadString;
-                    var arr=str.split(",");
-                    tempVal=parseFloat(arr[0]);
-                    humiVal=parseFloat(arr[1]); 
-                    $("#message").val(str)
+                    try{
+                        var str=message.payloadString;
+                        var json=JSON.parse(str);
+                        $("#message").val(str)
+                    }catch(e){
+                        var payload = message.payloadBytes;
+                        var data = new Uint16Array(payload);
+                        tempVal=data[0];
+                    }
                 };  
             }catch(e){
 
             }
         }
         function mqttob(){
-            if(isConnected===0){
+            if(isConnected===2){
                 mqtt();
             }
         }
