@@ -1,3 +1,4 @@
+
 <!DOCTYPE HTML>
 <html>
 	<head>
@@ -8,38 +9,59 @@
         <script src="http://static.mogudz.com/js/mqttws31.js"></script>
 		<script type="text/javascript" src="http://static.mogudz.com/js/jquery.min.js"></script>
 		<script type="text/javascript">
-		var tempVal=0,humiVal=0;	 
-
-		client = new Paho.MQTT.Client("www.mogudz.com", 8083, "clientIdxxx");
-		client.onConnectionLost = onConnectionLost;
-		client.onMessageArrived = onMessageArrived;
-		client.connect({onSuccess:onConnect});
+		var tempVal=0,humiVal=0;
+        var client;	
+        var isConnected=0;
+        var message;
 
         function pub()
         {
-        	message = new Paho.MQTT.Message($("#content").val());
-			message.destinationName = $("#pubtopic").val();
-			client.send(message); 	
+            message = new Paho.MQTT.Message($("#content").val());
+            message.destinationName = $("#pubtopic").val();
+            client.send(message);   
         }
         function sub()
         {
             client.subscribe($("#subtopic").val());
-        }  
-		function onConnect() {
-			console.log("onConnect");	
-		};
-        function onConnectionLost(responseObject) {
-			if (responseObject.errorCode !== 0)
-			console.log("onConnectionLost:"+responseObject.errorMessage);
-		};
-		function onMessageArrived(message) {
-			var str=message.payloadString;
-			var arr=str.split(",");
-			tempVal=parseFloat(arr[0]);
-			humiVal=parseFloat(arr[1]); 
-			$("#message").val(str)
-		};	
-$(function () {				 
+        }   
+
+        function mqtt(){
+            try 
+            {
+                client = new Paho.MQTT.Client("www.mogudz.com", 8083, "clientIdxxx");
+                client.onConnectionLost = onConnectionLost;
+                client.onMessageArrived = onMessageArrived;
+                client.connect({onSuccess:onConnect});
+
+                function onConnect() {
+                    console.log("onConnect"); 
+                    client.subscribe($("#subtopic").val());
+                    isConnected=1;  
+                };
+                function onConnectionLost(responseObject) {
+                    if (responseObject.errorCode !== 0)
+                    console.log("onConnectionLost:"+responseObject.errorMessage);
+                    isConnected=0;
+                };
+                function onMessageArrived(message) {
+                    var str=message.payloadString;
+                    var arr=str.split(",");
+                    tempVal=parseFloat(arr[0]);
+                    humiVal=parseFloat(arr[1]); 
+                    $("#message").val(str)
+                };  
+            }catch(e){
+
+            }
+        }
+        function mqttob(){
+            if(isConnected===0){
+                mqtt();
+            }
+        }
+        setInterval(mqttob,5000);
+$(function () {		
+        mqtt();		 
     	var temp_options={
         chart: {
             type: 'gauge',
